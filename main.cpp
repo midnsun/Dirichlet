@@ -20,7 +20,7 @@ double f_main(double x, double y) {
 }
 
 double f_test(double x, double y) {
-	return 4.0 * (x * x + y * y) * std::exp(x * x - y * y);
+	return -4.0 * (x * x + y * y) * std::exp(x * x - y * y);
 }
 
 double mu1(double y) {
@@ -314,6 +314,8 @@ public:
 	int curN2;
 	double time_grid;
 	double time_grid2;
+	double norm_r0;
+	double norm_r0_example;
 
 	void init_x() { // mode, task
 		init(x, (n + 1) * (m + 1));
@@ -440,7 +442,7 @@ public:
 				offset = j * (n + 1);
 				for (size_t i = 1; i < n; ++i) {
 					x = a + static_cast<double>(i) * h;
-					f.data[offset + i] = -f_test(x, y);
+					f.data[offset + i] = f_test(x, y);
 				}
 			}
 		}
@@ -450,7 +452,7 @@ public:
 				offset = j * (n + 1);
 				for (size_t i = 1; i < n; ++i) {
 					x = a + static_cast<double>(i) * h;
-					f.data[offset + i] = -f_main(x, y);
+					f.data[offset + i] = f_main(x, y);
 				}
 			}
 		}
@@ -489,6 +491,7 @@ public:
 		size_t offset = 0;
 		init(x_example, (n + 1) * (m + 1));
 		init(x_example_interp, (n + 1) * (m + 1));
+		norm_r0 = get_r0();
 
 		if (task_number == 0) {
 			for (size_t j = 0; j <= m; ++j) {
@@ -496,7 +499,7 @@ public:
 				offset = j * (n + 1);
 				for (size_t i = 0; i <= n; ++i) {
 					x = a + static_cast<double>(i) * h;
-					res.data[offset + i] -= u_test(x, y);
+					res.data[offset + i] = u_test(x, y) - res.data[offset + i];
 					this->x_example.data[offset + i] = u_test(x, y);
 					this->x_example_interp.data[offset + i] = u_test(x, y);
 				}
@@ -505,6 +508,7 @@ public:
 			cureps_r2 = 0.0;
 			curN2 = 0;
 			time_grid2 = 0.0;
+			norm_r0_example = 0.0;
 		}
 		else if (task_number == 1) {
 			Solver s(n * 2, m * 2, first_x_mode, task_number);
@@ -523,6 +527,7 @@ public:
 			cureps_r2 = s.cureps_r;
 			curN2 = s.curN;
 			time_grid2 = s.time_grid;
+			norm_r0_example = s.get_r0();
 		}
 		else {
 			throw std::runtime_error("Invalid task number");
@@ -602,9 +607,10 @@ public:
 	void write_to_file(std::string file) {
 		Vector diff;
 		init(diff, (n + 1) * (m + 1));
-		diff = this->x - this->x_example;
+		if (task_number == 0) diff = this->x_example - this->x;
+		if (task_number == 1) diff = this->x - this->x_example;
 
-		std::string path_to_dir = "C:/<path>/data/";
+		std::string path_to_dir = "C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/";
 		std::string file_x = path_to_dir + file + "_x.bin";
 		std::string file_example = path_to_dir + file + "_example.bin";
 		std::string file_diff = path_to_dir + file + "_diff.bin";
@@ -632,7 +638,7 @@ public:
 };
 
 int main(int argc, char* argv[]) { // n, m, task, first_x, eps, eps_r, maxN, eps2, eps_r2, maxN2
-	std::string path_to_dir = "C:/<path>/data/";
+	std::string path_to_dir = "C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/";
 	const bool console_mode = true;
 	const bool file_mode = true;
 	int64_t n = 0;
@@ -692,7 +698,6 @@ int main(int argc, char* argv[]) { // n, m, task, first_x, eps, eps_r, maxN, eps
 		err = std::get<0>(restuple);
 		x_err = std::get<1>(restuple);
 		y_err = std::get<2>(restuple);
-		norm_r0 = s.get_r0();
 
 		if (!file_mode) {
 			std::cout << "Error is: " << err << "; x: " << x_err << "; y: " << y_err << std::endl;
@@ -705,7 +710,7 @@ int main(int argc, char* argv[]) { // n, m, task, first_x, eps, eps_r, maxN, eps
 			out << (n + 1) << std::endl << (m + 1) << std::endl << err << std::endl << x_err << std::endl << y_err << std::endl
 				<< s.cureps << std::endl << s.cureps_r << std::endl << s.curN << std::endl << s.time_grid << std::endl
 				<< s.cureps2 << std::endl << s.cureps_r2 << std::endl << s.curN2 << std::endl << s.time_grid2 << std::endl
-				<< norm_r0 << std::endl;
+				<< s.norm_r0 << std::endl << s.norm_r0_example << std::endl;
 			out.close();
 			s.write_to_file(file);
 		}

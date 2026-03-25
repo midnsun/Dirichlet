@@ -40,7 +40,7 @@ class GridModel(QAbstractTableModel):
 
 class TableWindow(QMainWindow):
 
-    def __init__(self, grid, title):
+    def __init__(self, grid, title, mode):
         super().__init__()
 
         self.setWindowTitle(title)
@@ -55,7 +55,7 @@ class TableWindow(QMainWindow):
         for i in range(cols):
             table.setHorizontalHeaderItem(i + 1, QTableWidgetItem(f"{i}"))
             # table.setItem(0, i+2, QTableWidgetItem(str(i)))          # index
-            table.setItem(0, i+1, QTableWidgetItem(f"{x[i]:.4f}"))   # coordinate
+            table.setItem(0, i+1, QTableWidgetItem(f"{x[i]:.3f}"))   # coordinate
 
         y = np.linspace(task_c, task_d, rows)
 
@@ -63,15 +63,14 @@ class TableWindow(QMainWindow):
         for j in range(rows):
             table.setVerticalHeaderItem(rows - j, QTableWidgetItem(f"{j}"))
             # table.setItem(rows + 1 - j, 0, QTableWidgetItem(str(j)))          # index
-            table.setItem(rows - j, 0, QTableWidgetItem(f"{y[j]:.4f}"))   # coordinate
+            table.setItem(rows - j, 0, QTableWidgetItem(f"{y[j]:.3f}"))   # coordinate
 
         for j in range(rows):
             for i in range(cols):
-                table.setItem(
-                rows - j,
-                i+1,
-                QTableWidgetItem(f"{grid[j, i]:.6f}")
-                )
+                if mode == 'f':
+                    table.setItem(rows - j, i+1, QTableWidgetItem(f"{grid[j, i]:.3f}"))
+                elif mode == 'e':
+                    table.setItem(rows - j, i+1, QTableWidgetItem(f"{grid[j, i]:.3e}"))
 
         table.setItem(0,0,QTableWidgetItem("yj\txi"))
            
@@ -190,8 +189,8 @@ class MainWindow(QMainWindow):
         self.eps_r2 = QLineEdit("1e-17")
         self.maxN2 = QLineEdit("100000")
 
-        self.test_task = QLabel("u(a,y) = exp(1-y²)   u(b,y) = exp(4-y²) \nu(x,c) = exp(x²-1)   u(x,d) = exp(x²-4)\nf(x,y) = 4(x²+y²)exp(x²-y²)")
-        self.main_task = QLabel("u(a,y) = 0             u(b,y) = 0\nu(x,c) = sin²(πx)   u(x,d) = ch((x-1)(x-2)) - 1\nf(x,y) = arctg(x/y)")
+        self.test_task = QLabel("u(a,y) = exp(1-y²)   u(b,y) = exp(4-y²)   y ∈ [c, d]\nu(x,c) = exp(x²-1)   u(x,d) = exp(x²-4)   x ∈ [a, b]\nf(x,y) = 4(x²+y²)exp(x²-y²)")
+        self.main_task = QLabel("u(a,y) = 0             u(b,y) = 0,                          y ∈ [c, d]\nu(x,c) = sin²(πx)   u(x,d) = ch((x-1)(x-2)) - 1   x ∈ [a, b]\nf(x,y) = arctg(x/y)")
 
         # -------------------
         # PROBLEM BOX
@@ -204,11 +203,12 @@ class MainWindow(QMainWindow):
         problem_layout.addWidget(QLabel(f"Вариант задачи 9. Выполнил студент группы 3823Б1ПМоп3 Загрядсков Максим"),0,0)
         problem_layout.addWidget(QLabel(f"Δu(x,y) = -f(x,y),  x ∈ (a, b),  y ∈ (c, d)"),1,0)
         problem_layout.addWidget(QLabel(f"a = {task_a}   b = {task_b}   c = {task_c}   d = {task_d}"),2,0)
-        problem_layout.addWidget(QLabel("Выбор задания:"),3,0)
-        problem_layout.addWidget(self.task,3,1)
+        problem_layout.addWidget(QLabel(f"Используется метод сопряженных градиентов"),3,0)
+        problem_layout.addWidget(QLabel("Выбор задания:"),4,0)
+        problem_layout.addWidget(self.task,4,1)
 
-        problem_layout.addWidget(self.test_task,4,0)
-        problem_layout.addWidget(self.main_task,4,0)
+        problem_layout.addWidget(self.test_task,5,0)
+        problem_layout.addWidget(self.main_task,5,0)
 
         problem_box.setLayout(problem_layout)
 
@@ -284,13 +284,13 @@ class MainWindow(QMainWindow):
 
         self.btn_table_x = QPushButton("Таблица v(N)(xi,yj)")
         self.btn_table_ex_0 = QPushButton("Таблица u(xi,yj)")
-        self.btn_table_diff_0 = QPushButton("Таблица v(N)(xi,yj) - u(xi,yj)")
+        self.btn_table_diff_0 = QPushButton("Таблица u(xi,yj) - v(N)(xi,yj)")
         self.btn_table_ex_1 = QPushButton("Таблица v2(N2)(x2i,y2j)")
         self.btn_table_diff_1 = QPushButton("Таблица v(N)(xi,yj) - v2(N2)(x2i,y2j)")
 
         self.btn_surface_x = QPushButton("График v(N)(xi,yj)")
         self.btn_surface_ex_0 = QPushButton("График u(xi,yj)")
-        self.btn_surface_diff_0 = QPushButton("График v(N)(xi,yj) - u(xi,yj)")
+        self.btn_surface_diff_0 = QPushButton("График u(xi,yj) - v(N)(xi,yj)")
         self.btn_surface_ex_1 = QPushButton("График v2(N2)(x2i,y2j)")
         self.btn_surface_diff_1 = QPushButton("График v(N)(x,y) - v2(N2)(x2i,y2j)")
         self.btn_surface_x_interp = QPushButton("График v(0)(xi,yj)")
@@ -404,7 +404,7 @@ class MainWindow(QMainWindow):
             interp = "3"
 
         cmd = [
-            "C:/<path>/executable.exe",
+            "C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/executable.exe",
             self.n.text(),
             self.m.text(),
             str(task),
@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
 
     def load_results(self):
 
-        with open("C:/<path>/data/data.txt") as f:
+        with open("C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/data.txt") as f:
             lines = [l.strip() for l in f.readlines()]
 
         nx = int(lines[0])
@@ -452,36 +452,48 @@ class MainWindow(QMainWindow):
         self.stats_text.setText(stats)
         self.stats_text.setTextFormat(Qt.RichText)
 
-        self.grid_x = np.fromfile("C:/<path>/data/data_x.bin", dtype=np.float64).reshape((ny, nx))
-        self.grid_ex = np.fromfile("C:/<path>/data/data_example.bin", dtype=np.float64).reshape((ny, nx))
-        self.grid_diff = np.fromfile("C:/<path>/data/data_diff.bin", dtype=np.float64).reshape((ny, nx))
-        self.grid_x_interp = np.fromfile("C:/<path>/data/data_x_interp.bin", dtype=np.float64).reshape((ny, nx))
-        self.grid_ex_interp = np.fromfile("C:/<path>/data/data_example_interp.bin", dtype=np.float64).reshape((ny, nx))
+        self.grid_x = np.fromfile("C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/data_x.bin", dtype=np.float64).reshape((ny, nx))
+        self.grid_ex = np.fromfile("C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/data_example.bin", dtype=np.float64).reshape((ny, nx))
+        self.grid_diff = np.fromfile("C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/data_diff.bin", dtype=np.float64).reshape((ny, nx))
+        self.grid_x_interp = np.fromfile("C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/data_x_interp.bin", dtype=np.float64).reshape((ny, nx))
+        self.grid_ex_interp = np.fromfile("C:/Users/chehp/OneDrive/Desktop/all/Numerical_methods/lab5/data/data_example_interp.bin", dtype=np.float64).reshape((ny, nx))
 
 
     def open_table_x(self):
-        w = TableWindow(self.grid_x, "v(N)(xi,yj)")
+        mode = ''
+        if (self.task.currentIndex() == 0):
+            mode = 'f'
+        else:
+            mode = 'f'
+        w = TableWindow(self.grid_x, "v(N)(xi,yj)", mode)
         self.child_windows.append(w)
         w.destroyed.connect(lambda: self.child_windows.remove(w))
         w.show()
 
     def open_table_ex(self):
         func_name = ""
-        if (self.task == 0):
+        mode = ''
+        if (self.task.currentIndex() == 0):
             func_name = "u(xi,yj)"
+            mode = 'f'
         else:
             func_name = "v2(N2)(xi,yj)"
-        w = TableWindow(self.grid_ex, func_name)
+            mode = 'f'
+        w = TableWindow(self.grid_ex, func_name, mode)
         self.child_windows.append(w)
         w.destroyed.connect(lambda: self.child_windows.remove(w))
         w.show()
 
     def open_table_diff(self):
-        if (self.task == 0):
-            func_name = "v(N)(xi,yj) - u(xi,yj)"
+        func_name = ""
+        mode = ''
+        if (self.task.currentIndex() == 0):
+            func_name = "u(xi,yj) - v(N)(xi,yj)"
+            mode = 'e'
         else:
             func_name = "v(N)(xi,yj) - v2(N2)(x2i,y2j)"
-        w = TableWindow(self.grid_diff, func_name)
+            mode = 'e'
+        w = TableWindow(self.grid_diff, func_name, mode)
         self.child_windows.append(w)
         w.destroyed.connect(lambda: self.child_windows.remove(w))
         w.show()
@@ -495,7 +507,7 @@ class MainWindow(QMainWindow):
 
     def open_surface_ex(self):
         func_name = ""
-        if (self.task == 0):
+        if (self.task.currentIndex() == 0):
             func_name = "u(xi,yj)"
         else:
             func_name = "v2(N2)(x2i,y2j)"
@@ -506,8 +518,8 @@ class MainWindow(QMainWindow):
 
     def open_surface_diff(self):
         func_name = ""
-        if (self.task == 0):
-            func_name = "v(N)(xi,yj) - u(xi,yj)"
+        if (self.task.currentIndex() == 0):
+            func_name = "u(xi,yj) - v(N)(xi,yj)"
         else:
             func_name = "v(N)(xi,yj) - v2(N2)(x2i,y2j)"
         w = SurfaceWindow(self.grid_diff, func_name, task_a, task_b, task_c, task_d, func_name)
@@ -524,7 +536,7 @@ class MainWindow(QMainWindow):
 
     def open_surface_ex_interp(self):
         func_name = ""
-        if (self.task == 0):
+        if (self.task.currentIndex() == 0):
             func_name = "u(x,y)"
         else:
             func_name = "v2(0)(x2i,y2j)"
@@ -539,7 +551,7 @@ class MainWindow(QMainWindow):
         if (self.main_task_enabled == False):
             stats += f"Для решения тестовой задачи использована сетка с параметрами:<br>"
             stats += f"<b>n = {self.n.text()}</b> - число разбиений по x; <b>m = {self.m.text()}</b> - число разбиений по y<br>"
-            stats += f"Использовался метод сопряженных градиентов<br>"
+            #stats += f"Использовался метод сопряженных градиентов<br>"
             stats += f"Точность метода: <b>ε<sub>метода</sub> = {float(self.eps.text()):.4e}</b><br><br>"
 
             stats += f"На решение затрачено: <b>N = {lines[7]}</b> шагов<br>"
@@ -566,7 +578,7 @@ class MainWindow(QMainWindow):
         if (self.main_task_enabled == True):
             stats += f"Для решения основной задачи использована сетка с параметрами:<br>"
             stats += f"<b>n = {self.n.text()}</b> - число разбиений по x; <b>m = {self.m.text()}</b> - число разбиений по y<br>"
-            stats += f"Использовался метод сопряженных градиентов<br>"
+            #stats += f"Использовался метод сопряженных градиентов<br>"
             stats += f"Точность метода: <b>ε<sub>метода</sub> = {float(self.eps.text()):.4e}</b><br>"
             stats += f"Точность метода для двойной сетки: <b>ε2<sub>метода</sub> = {float(self.eps2.text()):.4e}</b><br><br>"
 
@@ -579,7 +591,8 @@ class MainWindow(QMainWindow):
             stats += f"На решение на двойной сетке затрачено: <b>N2 = {lines[11]}</b> шагов<br>"
             stats += f"На решение на двойной сетке затрачено: <b>t2 = {float(lines[12]):.4f} с</b> времени<br>"
             stats += f"Достингуная точность метода: <b>ε2<sub>N2</sub> = {float(lines[9]):.4e}</b><br>"
-            stats += f"Невязка решения в евклидовой норме: <b>||r<sup>(N2)</sup>||<sub>2</sub> = {float(lines[10]):.4e}</b><br><br>"
+            stats += f"Невязка решения в евклидовой норме: <b>||r<sup>(N2)</sup>||<sub>2</sub> = {float(lines[10]):.4e}</b><br>"
+            stats += f"Невязка на нулевом шаге в евклидовой норме: <b>||r<sup>(0)</sup>||<sub>2</sub> = {float(lines[14]):.4e}</b><br><br>"
 
             stats += f"Основная задача решена с точностью:<br>"
             stats += f"<b>max|v<sup>(N)</sup>(x<sub>i</sub>, y<sub>j</sub>) - v2<sup>(N2)</sup>(x<sub>2i</sub>, y<sub>2j</sub>)| = {float(lines[2]):.4e}</b>, i ∈ [1,n-1], j ∈ [1,m-1]<br>"
